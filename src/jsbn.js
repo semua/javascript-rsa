@@ -527,6 +527,40 @@ function bnModPowInt(e,m) {
   if(e < 256 || m.isEven()) z = new Classic(m); else z = new Montgomery(m);
   return this.exp(e,z);
 }
+// (protected) return x s.t. r^x < DV
+function bnpChunkSize(r) { return Math.floor(Math.LN2*this.DB/Math.log(r)); }
+
+// (protected) convert to radix string
+function bnpToRadix(b) {
+  if(b == null) b = 10;
+  if(this.signum() == 0 || b < 2 || b > 36) return "0";
+  var cs = this.chunkSize(b);
+  var a = Math.pow(b,cs);
+  var d = nbv(a), y = nbi(), z = nbi(), r = "";
+  this.divRemTo(d,y,z);
+  while(y.signum() > 0) {
+    r = (a+z.intValue()).toString(b).substr(1) + r;
+    y.divRemTo(d,y,z);
+  }
+  return z.intValue().toString(b) + r;
+}
+// (public) 0 if this == 0, 1 if this > 0
+function bnSigNum() {
+  if(this.s < 0) return -1;
+  else if(this.t <= 0 || (this.t == 1 && this[0] <= 0)) return 0;
+  else return 1;
+}
+// (public) return value as integer
+function bnIntValue() {
+  if(this.s < 0) {
+    if(this.t == 1) return this[0]-this.DV;
+    else if(this.t == 0) return -1;
+  }
+  else if(this.t == 1) return this[0];
+  else if(this.t == 0) return 0;
+  // assumes 16 < DB < 32
+  return ((this[1]&((1<<(32-this.DB))-1))<<this.DB)|this[0];
+}
 
 // protected
 BigInteger.prototype.copyTo = bnpCopyTo;
@@ -544,6 +578,8 @@ BigInteger.prototype.divRemTo = bnpDivRemTo;
 BigInteger.prototype.invDigit = bnpInvDigit;
 BigInteger.prototype.isEven = bnpIsEven;
 BigInteger.prototype.exp = bnpExp;
+BigInteger.prototype.chunkSize = bnpChunkSize;
+BigInteger.prototype.toRadix = bnpToRadix;
 
 // public
 BigInteger.prototype.toString = bnToString;
@@ -553,6 +589,9 @@ BigInteger.prototype.compareTo = bnCompareTo;
 BigInteger.prototype.bitLength = bnBitLength;
 BigInteger.prototype.mod = bnMod;
 BigInteger.prototype.modPowInt = bnModPowInt;
+BigInteger.prototype.signum = bnSigNum;
+BigInteger.prototype.intValue = bnIntValue;
+
 
 // "constants"
 BigInteger.ZERO = nbv(0);
